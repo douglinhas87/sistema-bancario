@@ -1,6 +1,164 @@
+import json
+import os
 from datetime import datetime
+import getpass
 
-menu = """
+class Usuario:
+    def __init__(self, cpf, nome, senha):
+        self.cpf = cpf
+        self.nome = nome
+        self.senha = senha
+        self.saldo = 0.0
+        self.extrato = ""
+        self.numero_saques = 0
+
+    def adicionar_extrato(self, texto):
+        data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.extrato += f"{data} - {texto}\n"
+
+class Banco:
+    LIMITE_SAQUES = 3
+    LIMITE_VALOR = 500
+
+    def __init__(self):
+        self.usuarios = {}
+
+    def salvar_dados(self, arquivo="usuarios.json"):
+        dados = {}
+        for cpf, usuario in self.usuarios.items():
+            dados[cpf] = {
+                "nome": usuario.nome,
+                "senha": usuario.senha,
+                "saldo": usuario.saldo,
+                "extrato": usuario.extrato,
+                "numero_saques": usuario.numero_saques
+            }
+        with open(arquivo, "w") as f:
+            json.dump(dados, f, indent=4)
+    
+    def carregar_dados(self, arquivo="usuarios.json"):
+        if not os.path.exists(arquivo):
+            return
+        with open(arquivo, "r") as f:
+            dados = json.load(f)
+        for cpf, info in dados.items():
+            usuario = Usuario(cpf, info["nome"], info["senha"])
+            usuario.saldo = info["saldo"]
+            usuario.extrato = info["extrato"]
+            usuario.numero_saques = info["numero_saques"]
+            self.usuarios[cpf] = usuario
+
+    def cadastrar_usuario(self, cpf, nome, senha):
+        if cpf in self.usuarios:
+            print("Usuário já cadastrado.")
+            return False
+        self.usuarios[cpf] = Usuario(cpf, nome, senha)
+        print("Usuário cadastrado com sucesso!")
+        return True
+
+    def autenticar_usuario(self, cpf, senha):
+        usuario = self.usuarios.get(cpf)
+        if not usuario:
+            print("Usuário não encontrado. Cadastre-se primeiro.")
+            return False
+        if usuario.senha != senha:
+            print("Senha incorreta!")
+            return False
+        return True
+
+    def depositar(self, cpf, valor):
+        if cpf not in self.usuarios:
+            print("Usuário não encontrado. Cadastre-se primeiro.")
+            return False
+        if valor <= 0:
+            print("Operação falhou! O valor informado é inválido.")
+            return False
+        usuario = self.usuarios[cpf]
+        usuario.saldo += valor
+        usuario.adicionar_extrato(f"Depósito: R$ {valor:.2f}")
+        print("Depósito realizado com sucesso!")
+        return True
+
+    def sacar(self, cpf, valor):
+        if cpf not in self.usuarios:
+            print("Usuário não encontrado. Cadastre-se primeiro.")
+            return False
+
+        usuario = self.usuarios[cpf]
+
+        if valor <= 0:
+            print("Operação falhou! O valor informado é inválido.")
+            return False
+        if valor > usuario.saldo:
+            print("Operação falhou! Saldo insuficiente.")
+            return False
+        if valor > self.LIMITE_VALOR:
+            print("Operação falhou! O valor do saque excede o limite.")
+            return False
+        if usuario.numero_saques >= self.LIMITE_SAQUES:
+            print("Operação falhou! Número máximo de saques excedido.")
+            return False
+
+        usuario.saldo -= valor
+        usuario.numero_saques += 1
+        usuario.adicionar_extrato(f"Saque: R$ {valor:.2f}")
+        print("Saque realizado com sucesso!")
+        return True
+
+    def exibir_extrato(self, cpf):
+        if cpf not in self.usuarios:
+            print("Usuário não encontrado. Cadastre-se primeiro.")
+            return
+        usuario = self.usuarios[cpf]
+        print("\n================ EXTRATO ================")
+        if not usuario.extrato:
+            print("Não foram realizadas movimentações.")
+        else:
+            print(usuario.extrato)
+        print(f"\nSaldo: R$ {usuario.saldo:.2f}")
+        print("==========================================")
+
+    def listar_usuarios(self):
+        if not self.usuarios:
+            print("Nenhum usuário cadastrado.")
+        else:
+            print("\n=== Usuários Cadastrados ===")
+            for cpf, usuario in self.usuarios.items():
+                print(f"CPF: {cpf} | Nome: {usuario.nome}")
+            print("============================")
+
+    def pix_transferencia(self, remetente_cpf, destinatario_cpf, valor):
+        if remetente_cpf not in self.usuarios:
+            print("Remetente não encontrado. Cadastre o usuário primeiro.")
+            return False
+        if destinatario_cpf not in self.usuarios:
+            print("Destinatário não encontrado. Cadastre o usuário primeiro.")
+            return False
+        if valor <= 0:
+            print("Operação falhou! O valor deve ser positivo.")
+            return False
+        remetente = self.usuarios[remetente_cpf]
+        destinatario = self.usuarios[destinatario_cpf]
+
+        if remetente.saldo < valor:
+            print("Operação falhou! Saldo insuficiente.")
+            return False
+
+        remetente.saldo -= valor
+        destinatario.saldo += valor
+
+        remetente.adicionar_extrato(f"Pix enviado para {destinatario_cpf}: R$ {valor:.2f}")
+        destinatario.adicionar_extrato(f"Pix recebido de {remetente_cpf}: R$ {valor:.2f}")
+
+        print("Pix realizado com sucesso!")
+        return True
+
+
+def main():
+    banco = Banco()
+    banco.carregar_dados()
+
+    menu = """
 
 [d] Depositar
 [s] Sacar
@@ -12,158 +170,72 @@ menu = """
 
 => """
 
-contas = {}
+    while True:
+        opcao = input(menu).strip().lower()
 
-def cadastrar_usuario(contas, cpf, nome):
-    if cpf in contas:
-        print("Usuário já cadastrado.")
-        return False
-    contas[cpf] = {
-        "nome": nome,
-        "saldo": 0.0,
-        "extrato": "",
-        "numero_saques": 0
-    }
-    print("Usuário cadastrado com sucesso!")
-    return True
+        if opcao == "n":
+            cpf = input("Informe o CPF (Somente números): ").strip()
+            nome = input("Informe o nome completo: ").strip()
+            senha = getpass.getpass("Informe uma senha para sua conta: ").strip()
+            if banco.cadastrar_usuario(cpf, nome, senha):
+                banco.salvar_dados()
 
-def depositar(contas, cpf, valor):
-    if cpf not in contas:
-        print("Usuário não encontrado. Cadastre-se primeiro.")
-        return False
-    if valor <= 0:
-        print("Operação falhou! O valor informado é inválido.")
-        return False
-    contas[cpf]["saldo"] += valor
-    data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    contas[cpf]["extrato"] += f"{data} - Depósito: R$ {valor:.2f}\n"
-    print("Depósito realizado com sucesso!")
-    return True
+        elif opcao == "d":
+            cpf = input("Informe seu CPF: ").strip()
+            senha = getpass.getpass("Informe sua senha: ").strip()
+            if not banco.autenticar_usuario(cpf, senha):
+                continue
+            try:
+                valor = float(input("Informe o valor do depósito: "))
+            except ValueError:
+                print("Valor inválido! Informe um número.")
+                continue
+            if banco.depositar(cpf, valor):
+                banco.salvar_dados()
 
-def sacar(contas, cpf, valor):
-    if cpf not in contas:
-        print("Usuário não encontrado. Cadastre-se primeiro.")
-        return False
-    LIMITE_SAQUES = 3
-    LIMITE_VALOR = 500
+        elif opcao == "s":
+            cpf = input("Informe o CPF (Somente números): ").strip()
+            senha = getpass.getpass("Informe sua senha: ").strip()
+            if not banco.autenticar_usuario(cpf, senha):
+                continue
+            try:
+                valor = float(input("Informe o valor do saque: "))
+            except ValueError:
+                print("Valor inválido! Informe um número.")
+                continue
+            if banco.sacar(cpf, valor):
+                banco.salvar_dados()
 
-    saldo = contas[cpf]["saldo"]
-    numero_saques = contas[cpf]["numero_saques"]
+        elif opcao == "e":
+            cpf = input("Informe seu CPF: ").strip()
+            senha = getpass.getpass("Informe sua senha: ").strip()
+            if not banco.autenticar_usuario(cpf, senha):
+                continue
+            banco.exibir_extrato(cpf)
 
-    if valor <= 0:
-        print("Operação falhou! O valor informado é inválido.")
-        return False
-    if valor > saldo:
-        print("Operação falhou! Saldo insuficiente.")
-        return False
-    if valor > LIMITE_VALOR:
-        print("Operação falhou! O valor do saque excede o limite.")
-        return False
-    if numero_saques >= LIMITE_SAQUES:
-        print("Operação falhou! Número máximo de saques excedido.")
-        return False
+        elif opcao == "l":
+            banco.listar_usuarios()
 
-    contas[cpf]["saldo"] -= valor
-    contas[cpf]["numero_saques"] += 1
-    data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    contas[cpf]["extrato"] += f"{data} - Saque: R$ {valor:.2f}\n"
-    print("Saque realizado com sucesso!")
-    return True
+        elif opcao == "p":
+            remetente_cpf = input("Informe o CPF do remetente: ").strip()
+            senha = getpass.getpass("Informe a senha do remetente: ").strip()
+            if not banco.autenticar_usuario(remetente_cpf, senha):
+                continue
+            destinatario_cpf = input("Informe o CPF do destinatário: ").strip()
+            try:
+                valor = float(input("Informe o valor do Pix: "))
+            except ValueError:
+                print("Valor inválido! Informe um número.")
+                continue
+            if banco.pix_transferencia(remetente_cpf, destinatario_cpf, valor):
+                banco.salvar_dados()
 
-def exibir_extrato(contas, cpf):
-    if cpf not in contas:
-        print("Usuário não encontrado. Cadastre-se primeiro.")
-        return
-    print("\n================ EXTRATO ================")
-    extrato = contas[cpf]["extrato"]
-    saldo = contas[cpf]["saldo"]
-    if not extrato:
-        print("Não foram realizadas movimentações.")
-    else:
-        print(extrato)
-    print(f"\nSaldo: R$ {saldo:.2f}")
-    print("==========================================")
+        elif opcao == "q":
+            print("Saindo do sistema. Até mais!")
+            break
 
-def listar_usuarios(contas):
-    if not contas:
-        print("Nenhum usuário cadastrado.")
-    else:
-        print("\n=== Usuários Cadastrados ===")
-        for cpf, dados in contas.items():
-            print(f"CPF: {cpf} | Nome: {dados['nome']}")
-        print("============================")
+        else:
+            print("Operação inválida, por favor selecione novamente a operação desejada.")
 
-def pix_transferencia(contas, remetente_cpf, destinatario_cpf, valor):
-    if remetente_cpf not in contas:
-        print("Remetente não encontrado. Cadastre o usuário primeiro.")
-        return False
-    if destinatario_cpf not in contas:
-        print("Destinatário não encontrado. Cadastre o usuário primeiro.")
-        return False
-    if valor <= 0:
-        print("Operação falhou! O valor deve ser positivo.")
-        return False
-    if contas[remetente_cpf]["saldo"] < valor:
-        print("Operação falhou! Saldo insuficiente.")
-        return False
-
-    contas[remetente_cpf]["saldo"] -= valor
-    contas[destinatario_cpf]["saldo"] += valor
-
-    data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    contas[remetente_cpf]["extrato"] += f"{data} - Pix enviado para {destinatario_cpf}: R$ {valor:.2f}\n"
-    contas[destinatario_cpf]["extrato"] += f"{data} - Pix recebido de {remetente_cpf}: R$ {valor:.2f}\n"
-
-    print("Pix realizado com sucesso!")
-    return True
-
-
-while True:
-    opcao = input(menu).strip().lower()
-
-    if opcao == "n":
-        cpf = input("Informe o CPF (Somente números): ").strip()
-        nome = input("Informe o nome completo: ").strip()
-        cadastrar_usuario(contas, cpf, nome)
-
-    elif opcao == "d":
-        cpf = input("Informe seu CPF: ").strip()
-        try:
-            valor = float(input("Informe o valor do depósito: "))
-        except ValueError:
-            print("Valor inválido! Informe um número.")
-            continue
-        depositar(contas, cpf, valor)
-
-    elif opcao == "s":
-        cpf = input("Informe o CPF (Somente números): ").strip()
-        try:
-            valor = float(input("Informe o valor do saque: "))
-        except ValueError:
-            print("Valor inválido! Informe um número.")
-            continue
-        sacar(contas, cpf, valor)
-
-    elif opcao == "e":
-        cpf = input("Informe seu CPF: ").strip()
-        exibir_extrato(contas, cpf)
-
-    elif opcao == "l":
-        listar_usuarios(contas)
-
-    elif opcao == "p":
-        remetente_cpf = input("Informe o CPF do remetente: ").strip()
-        destinatario_cpf = input("Informe o CPF do destinatário: ").strip()
-        try:
-            valor = float(input("Informe o valor do Pix: "))
-        except ValueError:
-            print("Valor inválido! Informe um número.")
-            continue
-        pix_transferencia(contas, remetente_cpf, destinatario_cpf, valor)
-
-    elif opcao == "q":
-        print("Saindo do sistema. Até mais!")
-        break
-
-    else:
-        print("Operação inválida, por favor selecione novamente a operação desejada.")
+if __name__ == "__main__":
+    main()
