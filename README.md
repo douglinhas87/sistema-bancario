@@ -1,27 +1,45 @@
-# Sistema Bancário em Python 3
+# 💰 Sistema Bancário em Python 3
 
-## Descrição do Projeto
+## 📌 Descrição do Projeto
 
-Este projeto é um sistema bancário simples desenvolvido em Python que permite a gestão de contas de usuários, com funcionalidades essenciais como cadastro, depósito, saque, consulta de extrato e transferência via Pix entre contas. O sistema é baseado em linha de comando (terminal) e foi criado para fins educacionais, aplicando conceitos básicos de programação, manipulação de dados e controle de fluxo.
+Este projeto é um sistema bancário simples, desenvolvido com Python 3, que simula operações básicas de um banco via terminal. Ele permite cadastrar usuários, fazer depósitos, saques, transferências via Pix, consultar extratos e listar os usuários.  
+Foi criado com fins educacionais para reforçar conceitos como estruturas de dados, controle de fluxo, modularização e manipulação de dados no terminal.
 
-## Funcionalidades Implementadas
+---
 
-- **Cadastro de Usuários:** Permite registrar novos usuários pelo CPF e nome completo, garantindo que o mesmo CPF não seja cadastrado duas vezes.
-- **Depósito:** Usuários podem realizar depósitos em suas contas, que são registrados no extrato com data e hora.
-- **Saque:** Permite saques com limite diário (3 saques) e limite por operação (R$ 500,00), além de verificar saldo suficiente.
-- **Extrato:** Exibe todas as movimentações da conta (depósitos, saques e transferências via Pix), junto com o saldo atual.
-- **Listar Usuários:** Exibe a lista de usuários cadastrados com CPF e nome.
-- **Pix (Transferência entre contas):** Usuários podem realizar transferências instantâneas entre contas usando o CPF do remetente e do destinatário, com validação de saldo e registro no extrato de ambas as contas.
-- **Saída:** Permite sair do sistema de forma segura.
+## ✅ Funcionalidades Implementadas
 
-## Tecnologias Utilizadas
+- 🧾 **Cadastro de Usuários:** CPF único com nome completo.
+- 💵 **Depósito:** Atualiza saldo e extrato com data e hora.
+- 🏧 **Saque:** Limite de 3 saques por dia, valor máximo de R$500 por operação.
+- 📄 **Extrato:** Exibe todas as movimentações (depósitos, saques, Pix) com data/hora.
+- 👥 **Listar Usuários:** Mostra todos os usuários cadastrados com CPF e nome.
+- 🔁 **Pix:** Transferência entre contas pelo CPF, com validação e registro no extrato.
+- 🚪 **Sair:** Encerra o sistema de forma segura.
 
-- Python 3
-- Biblioteca `datetime` para registro das datas e horários das transações.
+---
 
-## Como usar
+## 🧰 Tecnologias Utilizadas
 
-1. Clone ou faça download do repositório.
+- **Python 3** – Linguagem principal
+- **datetime** – Registrar data e hora das transações
+- **json** – Salvar e carregar os dados
+- **os** – Interações com o sistema operacional (ex: limpar tela)
+- **getpass** – Entrada de senha oculta no terminal 
+
+---
+
+## 🖥️ Como Usar
+
+1. Clone ou baixe este repositório:
+   ```bash
+   git clone https://github.com/douglinhas87/sistema-bancario
+
 2. Execute o arquivo Python pelo terminal:
    ```bash
    python3 Sistema_Bancario.py
+
+## 📚 Autor
+
+Desenvolvido por **Douglas Ferraz** 👨‍💻  
+
